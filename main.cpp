@@ -2,7 +2,7 @@
 #include <fstream>
 #include <iostream>
 
-// We want to fit y^(t)=A+B*exp(C*t), where t is time, y is the lifetime
+// We want to fit y(t)=A+B*exp(C*t), where t is time, {A,B,C} are the fit coefficients
 static constexpr size_t COEFF_DOF = 3;
 // Number of datapoints (points in the decay curve)
 static constexpr size_t NUM_DATAPOINTS = 80;
