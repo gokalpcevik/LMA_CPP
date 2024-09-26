@@ -7,5 +7,7 @@ find_package(Eigen3 CONFIG REQUIRED)
 add_executable(LMA_Eigen 
   main.cpp)
 
+set_target_properties(LMA_Eigen PROPERTIES CXX_STANDARD 17)
+
 target_link_libraries(LMA_Eigen PRIVATE Eigen3::Eigen)
 
