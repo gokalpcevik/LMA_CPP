@@ -29,7 +29,7 @@ struct SDatapoint
 
 // Compute Jacobian for the exponential curve
 Eigen::Matrix<float, NUM_DATAPOINTS, COEFF_DOF> UsrDf_Jf(Eigen::Vector<float, COEFF_DOF> const& coeffs,
-                                                          std::array<SDatapoint, NUM_DATAPOINTS> const& dataset);
+                                                         std::array<SDatapoint, NUM_DATAPOINTS> const& dataset);
 // Parse data from a csv file
 bool ParseCSV(wchar_t const* file, TDataset& out_data);
 
@@ -42,7 +42,7 @@ public:
 
   // NOTE: Ideally, we'd use Automatic Differentiation to compute this and not hand-derive the analytical Jacobian.
   // However, in embedded systems AD is computationally heavy.
-  // Pointer to the function that computes the Jacobian of the residuals (user-supplied).
+  // Pointer to the function that computes the Jacobian of the fitted function.
   Matrixf<NumDatapoints, NumCoeff> (*fn_Jf)(Vectorf<NumCoeff> const&,
                                             std::array<SDatapoint, NumDatapoints> const&) = nullptr;
 
@@ -178,7 +178,7 @@ int main(int argc, char** argv)
 }
 
 Matrixf<NUM_DATAPOINTS, COEFF_DOF> UsrDf_Jf(Vectorf<COEFF_DOF> const& coeffs,
-                                             std::array<SDatapoint, NUM_DATAPOINTS> const& dataset)
+                                            std::array<SDatapoint, NUM_DATAPOINTS> const& dataset)
 {
   Matrixf<NUM_DATAPOINTS, COEFF_DOF> Jr = Matrixf<NUM_DATAPOINTS, COEFF_DOF>::Zero();
   float Beta0 = coeffs[0];
