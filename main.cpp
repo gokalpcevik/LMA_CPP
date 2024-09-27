@@ -28,7 +28,7 @@ struct SDatapoint
 };
 
 // Compute Jacobian for the exponential curve
-Eigen::Matrix<float, NUM_DATAPOINTS, COEFF_DOF> ComputeJr(Eigen::Vector<float, COEFF_DOF> const& coeffs,
+Eigen::Matrix<float, NUM_DATAPOINTS, COEFF_DOF> UsrDf_Jf(Eigen::Vector<float, COEFF_DOF> const& coeffs,
                                                           std::array<SDatapoint, NUM_DATAPOINTS> const& dataset);
 // Parse data from a csv file
 bool ParseCSV(wchar_t const* file, TDataset& out_data);
@@ -43,7 +43,7 @@ public:
   // NOTE: Ideally, we'd use Automatic Differentiation to compute this and not hand-derive the analytical Jacobian.
   // However, in embedded systems AD is computationally heavy.
   // Pointer to the function that computes the Jacobian of the residuals (user-supplied).
-  Matrixf<NumDatapoints, NumCoeff> (*pf_Jr)(Vectorf<NumCoeff> const&,
+  Matrixf<NumDatapoints, NumCoeff> (*fn_Jf)(Vectorf<NumCoeff> const&,
                                             std::array<SDatapoint, NumDatapoints> const&) = nullptr;
 
   // NOTE: (1)
@@ -65,7 +65,7 @@ public:
     for (iteration = 0; iteration < MaxIterations; ++iteration)
     {
       // Compute the Jacobian of the fitted function
-      Matrixf<NumDatapoints, NumCoeff> Jr = this->pf_Jr(Beta, dataset);
+      Matrixf<NumDatapoints, NumCoeff> Jr = this->fn_Jf(Beta, dataset);
       // Jacobian transpose
       Matrixf<NumCoeff, NumDatapoints> JrT = Jr.transpose();
       Vectorf<NumDatapoints> r = ComputeResiduals(dataset, Beta);
@@ -158,7 +158,7 @@ int main(int argc, char** argv)
 
   CLevenbergMarquardtSolver<COEFF_DOF, NUM_DATAPOINTS, false> solver;
   // Set the Jacobian function
-  solver.pf_Jr = ComputeJr;
+  solver.fn_Jf = UsrDf_Jf;
   // Set the initial parameters
   solver.Beta = {-20.0f, 100.0, -.06f};
 
@@ -177,7 +177,7 @@ int main(int argc, char** argv)
   return EXIT_SUCCESS;
 }
 
-Matrixf<NUM_DATAPOINTS, COEFF_DOF> ComputeJr(Vectorf<COEFF_DOF> const& coeffs,
+Matrixf<NUM_DATAPOINTS, COEFF_DOF> UsrDf_Jf(Vectorf<COEFF_DOF> const& coeffs,
                                              std::array<SDatapoint, NUM_DATAPOINTS> const& dataset)
 {
   Matrixf<NUM_DATAPOINTS, COEFF_DOF> Jr = Matrixf<NUM_DATAPOINTS, COEFF_DOF>::Zero();
