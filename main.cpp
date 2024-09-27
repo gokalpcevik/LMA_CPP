@@ -55,7 +55,7 @@ public:
   // 5. Geodesic Acceleration
   // NOTE: (2):
   // For our case (decaying fluorescence exponential), scale-by-10 seems to work okay.
-  void Solve(std::array<SDatapoint, NumDatapoints> const& dataset, size_t MaxIterations = 50, float Tol = 1e-6f,
+  void Solve(std::array<SDatapoint, NumDatapoints> const& dataset, size_t MaxIterations = 50, float Tol = 1e-8f,
              float Lambda0 = 1.0f)
   {
     float Lambda = Lambda0;
@@ -71,7 +71,10 @@ public:
       Vectorf<NumDatapoints> r = ComputeResiduals(dataset, Beta);
       // Compute current error
       float current_error = r.squaredNorm();
-      printf("Current Error: %.3f\n", current_error);
+      if constexpr (Verbose)
+      {
+        printf("Current Error: %.3f\n", current_error);
+      }
 
       // Gramian of Jr
       Matrixf<NumCoeff, NumCoeff> G = JrT * Jr;
@@ -81,10 +84,12 @@ public:
       // Solve step
       Vectorf<COEFF_DOF> Delta = H.colPivHouseholderQr().solve(JrT * r);
 
+      float norm_delta = Delta.norm();
       // Check if the update step magnitude (norm) is bigger than the minimum tolerance
       if (Delta.norm() < Tol)
       {
-        printf("Update step magnitude is lower than the allowed tolerance. Fitting has concluded.\n");
+        printf("\x1b[1;93mUpdate step magnitude is lower than the allowed tolerance. Fitting "
+               "has concluded.\x1b[0;0m\n");
         break;
       }
 
@@ -100,7 +105,7 @@ public:
 
         if constexpr (Verbose)
         {
-          std::printf("Updated parameters yield smaller error.\n");
+          std::printf("Updated parameters yielded a smaller error.\n");
           std::printf("Decreasing Lambda by a factor of 10.\n");
         }
       }
@@ -109,7 +114,7 @@ public:
         Lambda = std::min(Lambda * 10.0f, 1e7f);
         if constexpr (Verbose)
         {
-          std::printf("Updated parameters yield larger error.\n");
+          std::printf("Updated parameters yielded a larger error.\n");
           std::printf("Increasing Lambda by a factor of 10.\n");
         }
       }
@@ -140,21 +145,35 @@ public:
 // Program entry
 int main(int argc, char** argv)
 {
-  TDataset dataset;
-  if (!ParseCSV(L"m2.txt", dataset))
+  std::array<TDataset, 4> dataset;
+  // clang-format off
+  if (!ParseCSV(L"m1.txt", dataset[0]) || 
+      !ParseCSV(L"m2.txt", dataset[1]) || 
+      !ParseCSV(L"m3.txt", dataset[2]) ||
+      !ParseCSV(L"m4.txt", dataset[3]))
   {
     return EXIT_FAILURE;
   }
+  // clang-format on
 
-  CLevenbergMarquardtSolver<COEFF_DOF, NUM_DATAPOINTS, true> solver;
+  CLevenbergMarquardtSolver<COEFF_DOF, NUM_DATAPOINTS, false> solver;
   // Set the Jacobian function
   solver.pf_Jr = ComputeJr;
+  // Set the initial parameters
   solver.Beta = {-20.0f, 100.0, -.06f};
-  solver.Solve(dataset, 1000);
 
-  printf("Parameters=[%.3f,%.3f,%.3f]\n", solver.Beta[0], solver.Beta[1], solver.Beta[2]);
-  printf("Calculated Lifetime=%.3f\n", -1.0f / solver.Beta[2]);
-
+  // For comparison
+  float MATLAB_Results[4] = {14.167f, 14.354f, 14.289f, 14.414f};
+  for (size_t i = 0; i < 4; ++i)
+  {
+    printf("Measurement %zu\n", i + 1);
+    solver.Solve(dataset[i], 200);
+    printf("Parameters=[%.3f,%.3f,%.3f]\n", solver.Beta[0], solver.Beta[1], solver.Beta[2]);
+    printf("-------------------------------\n");
+    printf("\x1b[1;94m* Lifetime in C++=%.3f us   \x1b[0;0m|\n", -1.0f / solver.Beta[2]);
+    printf("\x1b[1;91m* Lifetime in MATLAB=%.3f us\x1b[0;0m|\n", MATLAB_Results[i]);
+    printf("-------------------------------\n");
+  }
   return EXIT_SUCCESS;
 }
 
